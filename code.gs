@@ -55,7 +55,7 @@ function get_posts_yesterday() {
      
   var next_url;
   var ret_objs = []
-  
+
   while(true) {
     if(next_url) {
       var url = url_base + next_url
@@ -73,8 +73,8 @@ function get_posts_yesterday() {
 
     var obj = objs[objs.length-1]
     var diff_day = Math.round((NOW - obj.date)/1000/60/60/24*10)/10
-
-    if(diff_day > 2) {
+    
+    if(diff_day >= 2) {
       break
     }
   }
@@ -102,7 +102,6 @@ function batch_get_interesting_ptt() {
       }            
     }  
     
-    
     if(keywords.length > 0) {
       keywords = httplib.get_unique(keywords)
       
@@ -116,7 +115,7 @@ function batch_get_interesting_ptt() {
     }
   }
 
-  var mail_title = Utilities.formatString("[interesting ptt] %d", objs.length)
+  var mail_title = Utilities.formatString("[ptt] %d", objs.length)
   var mail_lines = ""
   var link_prefix = "https://www.ptt.cc/bbs/Gossiping/"
   
