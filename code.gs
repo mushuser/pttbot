@@ -30,12 +30,6 @@ function parse_page(text) {
     obj.title = obj.title || m[3] || m[5]
     obj.date_str = obj.date_str || m[6]
     
-    if(obj.title) {
-      if(obj.title.indexOf("Re: ") > -1) {
-        obj.title = obj.title.slice(4)
-      }
-    }
-    
     if( obj.likes == '<div class="nrec"><\/div>') {
       obj.likes = 1
     }
