@@ -1,36 +1,63 @@
+var __DEBUG__ = false
+
 function parse_page(text) {
   var re = /(?:bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
+  var re = /(?:<span class="hl f2">(.*)<\/span>|bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
+  var re = /(?:<div class="nrec">.*>(.*)<\/span>|bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
+  
   var m;
   var objs = []
 
   var obj = {
+    "likes":null,
     "file":null,
     "title":null,
     "date_str":null
   }
   
   while((m = re.exec(text)) != null) {
-    obj.file = obj.file || m[1]
-    obj.title = obj.title || m[2]
-    obj.date_str = obj.date_str || m[3]
+    obj.likes = obj.likes || m[1]
+    obj.file = obj.file || m[2]
+    obj.title = obj.title || m[3]
+    obj.date_str = obj.date_str || m[4]
     
-    if(obj.file && obj.title && obj.date_str) {
+    if(obj.likes == "爆") {
+      obj.likes = 100
+    } else if(obj.likes == null) {
+      obj.likes = 0 
+    } else {
+      obj.likes = parseInt(obj.likes)
+    }
+    
+    if(obj.title) {
+      if(obj.title.indexOf("Re: ") > -1) {
+        obj.title = obj.title.slice(4)
+      }
+    }
+    
+    if(obj.likes && obj.file && obj.title && obj.date_str) {
       var date_splitted = obj.date_str.split("/")
       var m = date_splitted[0] - 1
       var d = date_splitted[1]
+     
       var date = new Date(YEAR, m, d)
       
       var obj_in = {
+        "likes":obj.likes,
         "file":obj.file,
         "title":obj.title,
         "date":date
       }
-      
+  
       objs.push(obj_in)
+      Logger.log(obj_in)
+      
+      obj.likes = null
       obj.file = null
       obj.title = null
       obj.date = null
     }
+
   }
   
   return objs  
@@ -38,8 +65,10 @@ function parse_page(text) {
 
 var MAX_POSTS = 3000
 var NOW = new Date()
-var YEAR = NOW.getUTCFullYear()
-  
+var YESTERDAY = NOW
+YESTERDAY.setDate(NOW.getDate() - 1)
+var YEAR = YESTERDAY.getUTCFullYear()
+
 function get_posts_yesterday() {
   var url_base = "https://www.ptt.cc"
   var entry_url = url_base + "/bbs/Gossiping/index.html"
@@ -69,12 +98,13 @@ function get_posts_yesterday() {
     var next_url = re.exec(t)[1]
     
     var objs = parse_page(t)
+
     ret_objs = ret_objs.concat(objs)
 
     var obj = objs[objs.length-1]
     var diff_day = Math.round((NOW - obj.date)/1000/60/60/24*10)/10
     
-    if(diff_day >= 2) {
+    if(diff_day > 1) {
       break
     }
   }
@@ -89,6 +119,11 @@ function batch_get_interesting_ptt() {
   
   for(var i in posts) {
     var post = posts[i]
+
+    if(post.likes < 10) { // "爆" ok
+      continue
+    }    
+
     var title = post.title.toLowerCase()
     var file = post.file
 
@@ -106,6 +141,7 @@ function batch_get_interesting_ptt() {
       keywords = httplib.get_unique(keywords)
       
       var obj = {
+        "likes":post.likes,
         "title":title.slice(0,20),
         "file":file,
         "keywords":keywords
@@ -123,12 +159,17 @@ function batch_get_interesting_ptt() {
     var obj = objs[i]
     var link = link_prefix + obj.file
     var index = parseInt(i) + 1
-    mail_lines = mail_lines + Utilities.formatString("[%02d]%s ,%s ,%s\n\n", index, obj.keywords, link, obj.title)
+    mail_lines = mail_lines + Utilities.formatString("[%02d][%02d]%s ,%s ,%s\n\n", index, obj.likes, obj.keywords, link, obj.title)
   }
   
   if(objs.length > 0) {
     var mail = Session.getActiveUser().getEmail()
     
-    MailApp.sendEmail(mail, mail_title, mail_lines)
+    if( __DEBUG__ == false ) {
+      MailApp.sendEmail(mail, mail_title, mail_lines)
+    } else {
+      Logger.log(mail_title)  
+      Logger.log(mail_lines)  
+    }
   }
 }
