@@ -1,9 +1,18 @@
 var __DEBUG__ = false
 
+
+function debug_run() {
+  var text = HtmlService.createHtmlOutputFromFile('tmp');
+  
+  var page = text.getContent()
+  
+  var o = parse_page(page)
+  
+}
+
+
 function parse_page(text) {
-  var re = /(?:bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
-  var re = /(?:<span class="hl f2">(.*)<\/span>|bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
-  var re = /(?:<div class="nrec">.*>(.*)<\/span>|bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
+  var re = /(?:<span class="hl f\d">(.*)<\/span>|(<div class="nrec"><\/div>)|(\(本文已被刪除\) \[.*\])|bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
   
   var m;
   var objs = []
@@ -16,18 +25,10 @@ function parse_page(text) {
   }
   
   while((m = re.exec(text)) != null) {
-    obj.likes = obj.likes || m[1]
-    obj.file = obj.file || m[2]
-    obj.title = obj.title || m[3]
-    obj.date_str = obj.date_str || m[4]
-    
-    if(obj.likes == "爆") {
-      obj.likes = 100
-    } else if(obj.likes == null) {
-      obj.likes = 0 
-    } else {
-      obj.likes = parseInt(obj.likes)
-    }
+    obj.likes = obj.likes || m[1] || m[2]
+    obj.file = obj.file || m[3] || m[4]
+    obj.title = obj.title || m[3] || m[5]
+    obj.date_str = obj.date_str || m[6]
     
     if(obj.title) {
       if(obj.title.indexOf("Re: ") > -1) {
@@ -35,6 +36,10 @@ function parse_page(text) {
       }
     }
     
+    if( obj.likes == '<div class="nrec"><\/div>') {
+      obj.likes = 1
+    }
+
     if(obj.likes && obj.file && obj.title && obj.date_str) {
       var date_splitted = obj.date_str.split("/")
       var m = date_splitted[0] - 1
@@ -50,12 +55,11 @@ function parse_page(text) {
       }
   
       objs.push(obj_in)
-      Logger.log(obj_in)
       
       obj.likes = null
       obj.file = null
       obj.title = null
-      obj.date = null
+      obj.date_str = null
     }
 
   }
@@ -63,10 +67,10 @@ function parse_page(text) {
   return objs  
 }
 
-var MAX_POSTS = 3000
-var NOW = new Date()
-var YESTERDAY = NOW
-YESTERDAY.setDate(NOW.getDate() - 1)
+var YESTERDAY = new Date()
+var YESTERDAYx2 = new Date()
+YESTERDAY.setDate(YESTERDAY.getUTCDate() - 1)
+YESTERDAYx2.setDate(YESTERDAYx2.getUTCDate() - 2)
 var YEAR = YESTERDAY.getUTCFullYear()
 
 function get_posts_yesterday() {
@@ -102,11 +106,10 @@ function get_posts_yesterday() {
     ret_objs = ret_objs.concat(objs)
 
     var obj = objs[objs.length-1]
-    var diff_day = Math.round((NOW - obj.date)/1000/60/60/24*10)/10
-    
-    if(diff_day > 1) {
+
+    if(httplib.is_same_date(YESTERDAYx2, obj.date)) {
       break
-    }
+    }   
   }
 
   return ret_objs
@@ -120,7 +123,11 @@ function batch_get_interesting_ptt() {
   for(var i in posts) {
     var post = posts[i]
 
-    if(post.likes < 10) { // "爆" ok
+    if(!httplib.is_same_date(YESTERDAY, post.date)) {
+      continue
+    }   
+    
+    if(post.likes < 10) {
       continue
     }    
 
@@ -146,7 +153,7 @@ function batch_get_interesting_ptt() {
         "file":file,
         "keywords":keywords
       }
-      
+
       objs.push(obj)
     }
   }
