@@ -123,13 +123,9 @@ function batch_get_interesting_ptt() {
   for(var i in posts) {
     var post = posts[i]
 
-    if(!httplib.is_same_date(YESTERDAY, post.date)) {
+    if(!httplib.is_same_date(YESTERDAY, post.date) || (post.likes < 10)) {
       continue
     }   
-    
-    if(post.likes < 10) {
-      continue
-    }    
 
     var title = post.title.toLowerCase()
     var file = post.file
