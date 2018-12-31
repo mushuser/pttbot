@@ -7,7 +7,6 @@ function debug_run() {
   var page = text.getContent()
   
   var o = parse_page(page)
-  
 }
 
 
@@ -63,9 +62,9 @@ function parse_page(text) {
 
 var YESTERDAY = new Date()
 var YESTERDAYx2 = new Date()
-YESTERDAY.setDate(YESTERDAY.getUTCDate() - 1)
-YESTERDAYx2.setDate(YESTERDAYx2.getUTCDate() - 2)
-var YEAR = YESTERDAY.getUTCFullYear()
+YESTERDAY.setDate(YESTERDAY.getDate() - 1)
+YESTERDAYx2.setDate(YESTERDAYx2.getDate() - 2)
+var YEAR = YESTERDAY.getFullYear()
 
 function get_posts_yesterday() {
   var url_base = "https://www.ptt.cc"
