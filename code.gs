@@ -9,6 +9,7 @@ function debug_run() {
   var o = parse_page(page)
 }
 
+var last_m = null;
 
 function parse_page(text) {
   var re = /(?:<span class="hl f\d">(.*)<\/span>|(<div class="nrec"><\/div>)|(\(本文已被刪除\) \[.*\])|bbs\/Gossiping\/(M.*html)">(.*)<\/a>|<div class="date">(.*)<\/div>)/g
@@ -22,6 +23,8 @@ function parse_page(text) {
     "title":null,
     "date_str":null
   }
+
+
   
   while((m = re.exec(text)) != null) {
     obj.likes = obj.likes || m[1] || m[2]
@@ -32,13 +35,25 @@ function parse_page(text) {
     if( obj.likes == '<div class="nrec"><\/div>') {
       obj.likes = 1
     }
+    
+    if( obj.likes == '爆' ) {
+      obj.likes = 99
+    }
 
     if(obj.likes && obj.file && obj.title && obj.date_str) {
       var date_splitted = obj.date_str.split("/")
       var m = date_splitted[0] - 1
       var d = date_splitted[1]
-     
-      var date = new Date(YEAR, m, d)
+      
+      if(last_m == null) {
+        last_m = m  
+      }
+      
+      if(m <= last_m) {
+        var date = new Date(YEAR, m, d)
+      } else {
+        var date = new Date(YEAR-1, m, d)
+      }
       
       var obj_in = {
         "likes":obj.likes,
@@ -54,7 +69,6 @@ function parse_page(text) {
       obj.title = null
       obj.date_str = null
     }
-
   }
   
   return objs  
@@ -62,9 +76,11 @@ function parse_page(text) {
 
 var YESTERDAY = new Date()
 var YESTERDAYx2 = new Date()
+var now = new Date()
+
 YESTERDAY.setDate(YESTERDAY.getDate() - 1)
 YESTERDAYx2.setDate(YESTERDAYx2.getDate() - 2)
-var YEAR = YESTERDAY.getFullYear()
+var YEAR = now.getFullYear()
 
 function get_posts_yesterday() {
   var url_base = "https://www.ptt.cc"
