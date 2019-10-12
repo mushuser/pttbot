@@ -100,6 +100,9 @@ function get_posts(date) {
   var next_url;
   var ret_objs = []
 
+  var date_plus_one = new Date()
+  date_plus_one.setDate(date.getDate()+1)
+  
   while(true) {
     if(next_url) {
       var url = url_base + next_url
@@ -117,24 +120,54 @@ function get_posts(date) {
       throw "no obj return from parse_page()" 
     }
     
-    var first_obj = objs[0]
-    var ymd = get_ymd(date)
-    
-    if(first_obj.date >= ymd) {
-      ret_objs = ret_objs.concat(objs) 
+    var ymd_1 = get_ymd(date) // old
+    var ymd_2 = get_ymd(date_plus_one) // new
+    objs = objs.reverse()
+    var first_obj = objs[0] // new
+    var last_obj = objs[objs.length-1] // old
+
+
+    if((first_obj.date >= ymd_2) && (last_obj.date >= ymd_2) ) {
       continue
-    } else {
-      var last
-      for(last=1; last<objs.length; last++) {
-        var obj = objs[last]
-        if(obj.date >= ymd) {
+    }
+    
+    // S1
+    if((first_obj.date >= ymd_2) && (last_obj.date < ymd_2) ) {
+      var j;
+      for(j = objs.length-2; j>=0; j--) {
+        var o = objs[j]
+        if(o.date >= ymd_2) {
+          ret_objs = ret_objs.concat(objs.slice(j+1, objs.length)) 
           break
         }
       }
-      
-      ret_objs = ret_objs.concat(objs.slice(last-1, objs.length)) 
+      continue
+    }
+
+    if((first_obj.date >= ymd_1) && 
+       (last_obj.date >= ymd_1) &&
+       (first_obj.date < ymd_2) &&
+       (last_obj.date < ymd_2)) {
+          ret_objs = ret_objs.concat(objs) 
+          continue
+    }
+
+    // S2
+    if((first_obj.date >= ymd_1) && (last_obj.date < ymd_1) ) {
+      var last;
+      for(last=objs.length-2; last>=0; last--) {
+        var obj = objs[last]
+        if(obj.date >= ymd_1) {
+          ret_objs = ret_objs.concat(objs.slice(0, last+1)) 
+          break
+        }
+      }
       break
-    } 
+    }
+    
+    if((first_obj.date < ymd_1) && (last_obj.date < ymd_1)) {
+      break
+    }
   }
 
   return ret_objs
@@ -182,7 +215,7 @@ function parse_section(text) {
   var m_mark = re_mark.exec(text)
   var mark = m_mark[1]
   
-  obj = { mark:mark,
+  obj = {mark:mark,
          date_str:date_str,
          date:date,
          title:title,
@@ -243,4 +276,21 @@ function get_ymd(date) {
  var return_date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);  
   
  return return_date
+}
+
+
+function x() {
+  var now = new Date()
+
+  var o = get_posts(YESTERDAY)
+
+  Logger.log(o.length)
+Logger.log(o[0])
+Logger.log(o[1])
+Logger.log(o[2])
+Logger.log(o[o.length-3])
+Logger.log(o[o.length-2])
+Logger.log(o[o.length-1])
+
+  
 }
