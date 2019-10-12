@@ -21,10 +21,9 @@ var YEAR = now.getFullYear()
 
 // daily
 function batch_get_interesting_ptt() {
-  var posts = get_posts(YESTERDAY)
+  var posts = get_posts(YESTERDAY, "Gossiping")
   var objs = []
   
-  Logger.log(posts.length)
   for(var i in posts) {
     var post = posts[i]
 
@@ -83,10 +82,11 @@ function batch_get_interesting_ptt() {
   }
 }
 
+var url_base = "https://www.ptt.cc/bbs/"
 
-function get_posts(date) {
-  var url_base = "https://www.ptt.cc"
-  var entry_url = url_base + "/bbs/Gossiping/index.html"
+function get_posts(date, board, likes) {
+  var entry_base = url_base + board + "/"
+  var entry_url = entry_base + "index.html"
 
   var headers = {
     "cookie":"over18=1"
@@ -105,24 +105,29 @@ function get_posts(date) {
   
   while(true) {
     if(next_url) {
-      var url = url_base + next_url
+      var url = entry_base + next_url
     } else {
       var url = entry_url    
     }
     
     var r = httplib.httpretry(url, options)
     var t = r.getContentText()
-    var re = /<a class="btn wide" href="(\/bbs\/Gossiping\/index\d*\.html)">&lsaquo;/
+    var re = /<a class="btn wide" href="\/bbs\/Gossiping\/(index\d*\.html)">&lsaquo;/
     var next_url = re.exec(t)[1]
-    var objs = parse_page(t)
+    var objs = parse_page(t, likes)
     
     if(objs == undefined) {
       throw "no obj return from parse_page()" 
+    }
+
+    if(objs.length < 1) {
+      continue  
     }
     
     var ymd_1 = get_ymd(date) // old
     var ymd_2 = get_ymd(date_plus_one) // new
     objs = objs.reverse()
+      
     var first_obj = objs[0] // new
     var last_obj = objs[objs.length-1] // old
 
@@ -174,7 +179,7 @@ function get_posts(date) {
 }
 
 
-function parse_section(text) {
+function parse_section(text, likes_f) {
   var re_removed = /(已被.*刪除)/
   var m_removed = re_removed.exec(text)
   if(m_removed) {
@@ -214,19 +219,23 @@ function parse_section(text) {
   var re_mark = /<div class="mark">(.*)<\/div>/
   var m_mark = re_mark.exec(text)
   var mark = m_mark[1]
-  
+
   obj = {mark:mark,
          date_str:date_str,
          date:date,
          title:title,
          file: file,
-         likes:likes}
-    
-  return obj   
+         likes:likes}  
+
+  if((likes_f != undefined) && (likes >= likes_f)) {
+    return obj   
+  } else {
+    return undefined 
+  }
 }
 
 
-function parse_page(text) {
+function parse_page(text, likes) {
   var re_1 = /(<div class="nrec">[\s\S]*)<div class="r-list-sep">/g
   var m_1 = re_1.exec(text) 
   if(m_1 == undefined) {
@@ -242,7 +251,7 @@ function parse_page(text) {
   
   while((m = re_2.exec(m_text)) != null) {
     if(m[1]) {
-      var out = parse_section(m[1])  
+      var out = parse_section(m[1], likes)  
       if(out) {
         objs.push(out)
       }
@@ -276,21 +285,4 @@ function get_ymd(date) {
  var return_date = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);  
   
  return return_date
-}
-
-
-function x() {
-  var now = new Date()
-
-  var o = get_posts(YESTERDAY)
-
-  Logger.log(o.length)
-Logger.log(o[0])
-Logger.log(o[1])
-Logger.log(o[2])
-Logger.log(o[o.length-3])
-Logger.log(o[o.length-2])
-Logger.log(o[o.length-1])
-
-  
 }
